@@ -44,7 +44,7 @@ function parseCSV(text: string) {
 export async function GET() {
   try {
     const res = await fetch(CSV_URL, {
-      next: { revalidate: 300 }, // 5분 캐시
+      next: { revalidate: 120 }, // 2분 캐시
     });
 
     if (!res.ok) {
