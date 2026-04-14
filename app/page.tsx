@@ -9,9 +9,12 @@ interface ContentItem {
   comment: string;
 }
 
-const MONTHS = ['4', '5', '6', '7', '8', '9', '10', '11', '12'];
-const ITEMS_PER_PAGE = 10;
 const PASSWORD = 'bulmak';
+
+function reelId(url: string): string | null {
+  const m = url.match(/\/reel\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
 
 // ─── 비밀번호 화면 ───────────────────────────────────────────
 function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
@@ -36,54 +39,33 @@ function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f0f2f5]">
-      <div
-        className={`bg-white rounded-2xl shadow-lg p-10 w-full max-w-sm text-center ${
-          shake ? 'animate-shake' : ''
-        }`}
-        style={{ maxWidth: '400px' }}
-      >
-        {/* 로고/타이틀 */}
-        <div className="mb-8">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-            style={{ backgroundColor: '#1a365d' }}
-          >
-            <span className="text-white text-2xl font-bold">불</span>
+    <div style={styles.gateWrap}>
+      <div style={{ ...styles.gateCard, ...(shake ? styles.shake : {}) }}>
+        <div style={styles.gateLogoWrap}>
+          <div style={styles.gateLogoIcon}>
+            <span style={styles.gateLogoText}>불</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-800 leading-tight">
-            불막열삼
-            <br />
-            점주님용 레퍼런스 사이트
+          <h1 style={styles.gateTitle}>
+            불막열삼<br />점주님용 레퍼런스 사이트
           </h1>
         </div>
 
-        {/* 입력 */}
-        <div className="mb-4">
+        <div style={{ marginBottom: '12px' }}>
           <input
             type="password"
             value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setError(false);
-            }}
+            onChange={(e) => { setInput(e.target.value); setError(false); }}
             onKeyDown={handleKey}
             placeholder="비밀번호를 입력하세요"
-            className="w-full border-2 border-gray-200 rounded-xl px-4 py-4 text-lg text-center focus:outline-none focus:border-[#1a365d] transition-colors"
+            style={styles.gateInput}
             autoFocus
           />
           {error && (
-            <p className="mt-2 text-red-500 text-sm font-medium">
-              비밀번호가 올바르지 않습니다.
-            </p>
+            <p style={styles.gateError}>비밀번호가 올바르지 않습니다.</p>
           )}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className="w-full py-4 rounded-xl text-white text-lg font-bold transition-opacity hover:opacity-90 active:opacity-80"
-          style={{ backgroundColor: '#1a365d' }}
-        >
+        <button onClick={handleSubmit} style={styles.gateButton}>
           입장하기
         </button>
       </div>
@@ -96,7 +78,7 @@ function PasswordGate({ onSuccess }: { onSuccess: () => void }) {
           60% { transform: translateX(-8px); }
           80% { transform: translateX(8px); }
         }
-        .animate-shake { animation: shake 0.4s ease; }
+        .shake-anim { animation: shake 0.4s ease; }
       `}</style>
     </div>
   );
@@ -107,7 +89,6 @@ function Dashboard() {
   const [data, setData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetch('/api/data')
@@ -119,21 +100,6 @@ function Dashboard() {
       .catch(() => setLoading(false));
   }, []);
 
-  const filtered = selectedMonth
-    ? data.filter((item) => item.month === selectedMonth)
-    : data;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginated = filtered.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const handleMonthSelect = (month: string | null) => {
-    setSelectedMonth(month);
-    setCurrentPage(1);
-  };
-
   // 현재 월 자동 선택 (최초 로드 시)
   useEffect(() => {
     if (data.length > 0 && selectedMonth === null) {
@@ -143,182 +109,360 @@ function Dashboard() {
     }
   }, [data]);
 
+  const months = Array.from(new Set(data.map((d) => d.month)))
+    .filter(Boolean)
+    .sort((a, b) => Number(a) - Number(b));
+
+  const filtered = selectedMonth
+    ? data.filter((item) => item.month === selectedMonth)
+    : data;
+
   return (
-    <div className="min-h-screen bg-[#f0f2f5]">
+    <div style={{ minHeight: '100vh', background: '#f0f0f0' }}>
       {/* 헤더 */}
-      <header style={{ backgroundColor: '#1a365d' }} className="shadow-md">
-        <div className="max-w-4xl mx-auto px-4 py-5">
-          <h1 className="text-white text-2xl font-bold text-center tracking-tight">
-            불막열삼 점주님용 레퍼런스 사이트
-          </h1>
-          <p className="text-blue-200 text-center text-sm mt-1">
-            참고할 만한 마케팅 컨텐츠 모음
-          </p>
-        </div>
+      <header style={styles.header}>
+        <h1 style={styles.headerTitle}>불막열삼 레퍼런스</h1>
+        <p style={styles.headerSub}>점주님을 위한 월별 마케팅 컨텐츠 모음</p>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {/* 월별 필터 */}
-        <div className="bg-white rounded-2xl shadow-sm p-4 mb-6">
-          <p className="text-gray-500 text-sm font-medium mb-3">월별 보기</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleMonthSelect(null)}
-              className={`px-4 py-2 rounded-xl text-base font-semibold transition-all ${
-                selectedMonth === null
-                  ? 'text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              style={selectedMonth === null ? { backgroundColor: '#1a365d' } : {}}
-            >
-              전체
-            </button>
-            {MONTHS.map((m) => (
+      {/* 필터 바 */}
+      <div style={styles.filterWrap}>
+        <div style={styles.filterInner}>
+          <button
+            onClick={() => setSelectedMonth(null)}
+            style={{
+              ...styles.filterBtn,
+              ...(selectedMonth === null ? styles.filterBtnActive : {}),
+            }}
+          >
+            전체 <span style={{ opacity: 0.6 }}>{data.length}</span>
+          </button>
+          {months.map((m) => {
+            const cnt = data.filter((d) => d.month === m).length;
+            return (
               <button
                 key={m}
-                onClick={() => handleMonthSelect(m)}
-                className={`px-4 py-2 rounded-xl text-base font-semibold transition-all ${
-                  selectedMonth === m
-                    ? 'text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-                style={selectedMonth === m ? { backgroundColor: '#1a365d' } : {}}
-              >
-                {m}월
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 컨텐츠 목록 */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
-          {loading ? (
-            <div className="py-20 text-center">
-              <div
-                className="inline-block w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mb-3"
-                style={{ borderColor: '#1a365d', borderTopColor: 'transparent' }}
-              />
-              <p className="text-gray-500 text-lg">데이터를 불러오는 중...</p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-gray-400 text-lg">
-              {selectedMonth ? `${selectedMonth}월 등록된 컨텐츠가 없습니다.` : '등록된 컨텐츠가 없습니다.'}
-            </div>
-          ) : (
-            <>
-              {/* 목록 헤더 */}
-              <div
-                className="grid px-5 py-3 text-sm font-semibold text-white"
+                onClick={() => setSelectedMonth(m)}
                 style={{
-                  backgroundColor: '#2d4a7a',
-                  gridTemplateColumns: '60px 1fr 2fr',
+                  ...styles.filterBtn,
+                  ...(selectedMonth === m ? styles.filterBtnActive : {}),
                 }}
               >
-                <span>날짜</span>
-                <span>코멘트</span>
-                <span>링크</span>
-              </div>
+                {m}월 <span style={{ opacity: 0.6 }}>{cnt}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-              {/* 목록 아이템 */}
-              {paginated.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`grid px-5 py-4 items-start gap-3 border-b border-gray-100 hover:bg-blue-50 transition-colors ${
-                    idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                  }`}
-                  style={{ gridTemplateColumns: '60px 1fr 2fr' }}
-                >
-                  {/* 날짜 */}
-                  <div className="text-center">
-                    <span
-                      className="inline-block text-white text-sm font-bold px-2 py-1 rounded-lg"
-                      style={{ backgroundColor: '#1a365d' }}
-                    >
-                      {item.month}/{item.day}
-                    </span>
+      {/* 통계 */}
+      {!loading && (
+        <p style={styles.stats}>{filtered.length}개의 레퍼런스</p>
+      )}
+
+      {/* 카드 그리드 */}
+      <div style={styles.grid}>
+        {loading ? (
+          <div style={styles.empty}>
+            <div style={styles.spinner} />
+            데이터를 불러오는 중...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={styles.empty}>
+            {selectedMonth
+              ? `${selectedMonth}월 등록된 레퍼런스가 없습니다.`
+              : '등록된 레퍼런스가 없습니다.'}
+          </div>
+        ) : (
+          filtered.map((item, idx) => {
+            const id = reelId(item.link);
+            const embedSrc = id
+              ? `https://www.instagram.com/reel/${id}/embed/`
+              : null;
+
+            return (
+              <div key={idx} style={styles.card} className="ref-card">
+                {embedSrc && (
+                  <div style={styles.embedWrap} className="embed-wrap">
+                    <iframe
+                      src={embedSrc}
+                      scrolling="no"
+                      allowFullScreen
+                      loading="lazy"
+                      style={styles.iframe}
+                    />
                   </div>
-
-                  {/* 코멘트 */}
-                  <p className="text-gray-700 text-base leading-relaxed break-keep">
+                )}
+                <div style={styles.cardBody}>
+                  <div style={styles.cardDate}>
+                    {item.month}월 {item.day}일
+                  </div>
+                  <div style={styles.cardDesc}>
                     {item.comment || '-'}
-                  </p>
-
-                  {/* 링크 */}
+                  </div>
                   <a
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-base font-medium break-all hover:underline flex items-center gap-1"
-                    style={{ color: '#1a56db' }}
-                    title={item.link}
+                    style={styles.cardLink}
+                    className="card-link"
                   >
                     <svg
-                      className="flex-shrink-0 w-4 h-4"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      viewBox="0 0 24 24"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
+                      <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
                     </svg>
-                    <span className="line-clamp-2">{item.link}</span>
+                    인스타그램에서 보기
                   </a>
                 </div>
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* 페이지네이션 */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-11 h-11 rounded-xl border-2 border-gray-200 flex items-center justify-center text-gray-600 disabled:opacity-30 hover:border-[#1a365d] hover:text-[#1a365d] transition-colors font-bold text-lg"
-            >
-              ‹
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-11 h-11 rounded-xl font-semibold text-base transition-all ${
-                  currentPage === page
-                    ? 'text-white shadow-sm'
-                    : 'border-2 border-gray-200 text-gray-600 hover:border-[#1a365d] hover:text-[#1a365d]'
-                }`}
-                style={currentPage === page ? { backgroundColor: '#1a365d' } : {}}
-              >
-                {page}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="w-11 h-11 rounded-xl border-2 border-gray-200 flex items-center justify-center text-gray-600 disabled:opacity-30 hover:border-[#1a365d] hover:text-[#1a365d] transition-colors font-bold text-lg"
-            >
-              ›
-            </button>
-          </div>
+              </div>
+            );
+          })
         )}
+      </div>
 
-        {/* 결과 요약 */}
-        {!loading && filtered.length > 0 && (
-          <p className="text-center text-gray-400 text-sm pb-6">
-            총 {filtered.length}개 • {currentPage}/{totalPages} 페이지
-          </p>
-        )}
-      </main>
+      <style>{`
+        .ref-card {
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .ref-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.11) !important;
+        }
+        .embed-wrap::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s infinite;
+          z-index: 0;
+        }
+        .embed-wrap iframe { position: relative; z-index: 1; }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .card-link:hover { color: #111 !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 600px) {
+          .ref-grid { padding: 14px !important; gap: 14px !important; grid-template-columns: 1fr !important; }
+          .embed-wrap iframe { height: 420px !important; }
+        }
+      `}</style>
     </div>
   );
 }
+
+// ─── 스타일 객체 ──────────────────────────────────────────────
+const styles: Record<string, React.CSSProperties> = {
+  // Gate
+  gateWrap: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#f0f0f0',
+  },
+  gateCard: {
+    background: '#fff',
+    borderRadius: '16px',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+    padding: '40px 36px',
+    width: '100%',
+    maxWidth: '380px',
+    textAlign: 'center',
+  },
+  shake: {},
+  gateLogoWrap: {
+    marginBottom: '28px',
+  },
+  gateLogoIcon: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '56px',
+    height: '56px',
+    borderRadius: '50%',
+    background: '#111',
+    marginBottom: '14px',
+  },
+  gateLogoText: {
+    color: '#fff',
+    fontSize: '22px',
+    fontWeight: '700',
+  },
+  gateTitle: {
+    fontSize: '1.1rem',
+    fontWeight: '700',
+    color: '#1a1a1a',
+    lineHeight: '1.5',
+  },
+  gateInput: {
+    width: '100%',
+    border: '1.5px solid #ddd',
+    borderRadius: '10px',
+    padding: '14px 16px',
+    fontSize: '1rem',
+    textAlign: 'center',
+    outline: 'none',
+    transition: 'border-color 0.15s',
+  },
+  gateError: {
+    marginTop: '8px',
+    color: '#e53e3e',
+    fontSize: '0.82rem',
+    fontWeight: '500',
+  },
+  gateButton: {
+    width: '100%',
+    padding: '14px',
+    borderRadius: '10px',
+    background: '#111',
+    color: '#fff',
+    fontSize: '1rem',
+    fontWeight: '700',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'opacity 0.15s',
+  },
+  // Dashboard
+  header: {
+    background: '#111',
+    color: '#fff',
+    padding: '28px 24px 24px',
+    textAlign: 'center',
+  },
+  headerTitle: {
+    fontSize: '1.4rem',
+    fontWeight: '700',
+    letterSpacing: '-0.02em',
+  },
+  headerSub: {
+    fontSize: '0.82rem',
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: '6px',
+  },
+  filterWrap: {
+    background: '#fff',
+    borderBottom: '1px solid #e0e0e0',
+    padding: '14px 20px',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+  } as React.CSSProperties,
+  filterInner: {
+    display: 'flex',
+    gap: '8px',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    maxWidth: '900px',
+    margin: '0 auto',
+  } as React.CSSProperties,
+  filterBtn: {
+    padding: '7px 18px',
+    borderRadius: '100px',
+    border: '1.5px solid #ddd',
+    background: '#fff',
+    fontSize: '0.83rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s',
+    color: '#444',
+  } as React.CSSProperties,
+  filterBtnActive: {
+    background: '#111',
+    color: '#fff',
+    borderColor: '#111',
+  },
+  stats: {
+    textAlign: 'center',
+    fontSize: '0.78rem',
+    color: '#999',
+    padding: '14px 20px 0',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '20px',
+    padding: '20px',
+    maxWidth: '1400px',
+    margin: '0 auto',
+  } as React.CSSProperties,
+  card: {
+    background: '#fff',
+    borderRadius: '14px',
+    overflow: 'hidden',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+  },
+  embedWrap: {
+    position: 'relative',
+    width: '100%',
+    background: '#fafafa',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+  iframe: {
+    display: 'block',
+    width: '100%',
+    height: '480px',
+    border: 'none',
+  },
+  cardBody: {
+    padding: '16px',
+    borderTop: '1px solid #f0f0f0',
+  },
+  cardDate: {
+    fontSize: '0.72rem',
+    color: '#aaa',
+    marginBottom: '8px',
+    fontWeight: '500',
+  },
+  cardDesc: {
+    fontSize: '0.875rem',
+    lineHeight: '1.65',
+    color: '#2a2a2a',
+  },
+  cardLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    marginTop: '12px',
+    fontSize: '0.78rem',
+    color: '#888',
+    textDecoration: 'none',
+    fontWeight: '500',
+  } as React.CSSProperties,
+  empty: {
+    gridColumn: '1 / -1',
+    textAlign: 'center',
+    padding: '80px 20px',
+    color: '#aaa',
+    fontSize: '0.9rem',
+  } as React.CSSProperties,
+  spinner: {
+    width: '28px',
+    height: '28px',
+    border: '2.5px solid #ddd',
+    borderTopColor: '#555',
+    borderRadius: '50%',
+    animation: 'spin 0.7s linear infinite',
+    margin: '0 auto 12px',
+  },
+};
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function Home() {
@@ -329,7 +473,6 @@ export default function Home() {
     setIsAuth(saved === 'true');
   }, []);
 
-  // 첫 렌더링 전 (하이드레이션 방지)
   if (isAuth === null) return null;
 
   if (!isAuth) {
